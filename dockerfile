@@ -17,5 +17,4 @@ SHELL ["conda", "run", "-n", "mi_entorno", "/bin/bash", "-c"]
 COPY . .
 
 # Definir el comando de ejecución
-CMD ["python", "app.py"]
-
+CMD ["conda", "run", "-n", "mi_entorno", "python", "app.py"]

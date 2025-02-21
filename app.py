@@ -131,3 +131,7 @@ y_pred = model_cargado.predict(X_pred_scaled)
 X_pred['PREDICCION'] = y_pred
 
 X_pred.reset_index().to_excel('resultados.xlsx')
+
+response_model = pd.read_excel('resultados.xlsx')
+
+print(response_model.head())

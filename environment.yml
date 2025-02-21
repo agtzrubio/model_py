@@ -1,8 +1,9 @@
 name: mi_entorno
 dependencies:
-  - python=3.7
+  - python=3.9
   - scikit-learn
   - numpy
   - pandas
-  - pickle5
   - matplotlib
+  - openpyxl
+  - boto3
