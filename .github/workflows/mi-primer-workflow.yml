@@ -1,0 +1,15 @@
+name: Hello World
+on: [push]
+jobs:
+  Hello-World-Job:
+    runs-on:
+      - echo "Iniciando sesión en Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
+      - echo "Construyendo la imagen Docker basada en Anaconda..."
+      - codebuild-build-conda-${{ github.run_id }}-${{ github.run_attempt }}
+      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+      - echo "Publicando la imagen en ECR..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+    steps:
+      - run: echo "Hello World"
