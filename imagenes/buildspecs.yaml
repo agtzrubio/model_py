@@ -1,0 +1,77 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo $AWS_DEFAULT_REGION
+      - echo $AWS_ACCOUNT_ID
+      - echo $AWS_DEFAULT_REGION
+      - echo $IMAGE_REPO_NAME
+      - echo $REPOSITORY_URI
+      - echo $CLUSTER_NAME
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  build:
+    commands:
+      - echo "Construyendo la imagen Docker basada en Anaconda..."
+      # Aquí se construye la imagen; puedes ajustar el comando si requieres incorporar identificadores de build.
+      - docker build -t $IMAGE_REPO_NAME:latest .
+      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+      - echo "Publicando la imagen en ECR..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+      - echo "Obteniendo la URI de la imagen más reciente..."
+      #- echo "(aws ecr describe-images --repository-name $IMAGE_REPO_NAME --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)"
+      #- IMAGE_TAG=$(aws ecr describe-images --repository-name $IMAGE_REPO_NAME --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
+      - IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest"
+      - echo "Imagen encontrada"
+  post_build:
+    commands:
+      - echo "Creating imagedefinition.json..."
+      #- echo '[{"name":"container-name","imageUri":"'"$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION"'"}]' > imagedefinition.json
+      - echo "[{\"name\":\"${CLUSTER_NAME}\",\"imageUri\":\"${IMAGE_URI}\"}]" > imagedefinition.json
+      - cat imagedefinition.json
+      - ls -l
+      - echo "Hello World"
+artifacts:
+  files:
+    - "**/*"
+
+
+
+#################################################################################################################
+
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: $AWS_DEFAULT_REGION
+    AWS_ACCOUNT_ID: $AWS_ACCOUNT_ID
+    IMAGE_REPO_NAME: $REPO_NAME
+    ECS_CLUSTER: $ECS_CLUSTER_NAME
+    ECS_SERVICE: $ECS_SERVICE_NAME
+    TASK_FAMILY: $ECS_TASK_FAMILY
+    CONTAINER_NAME: $CONTAINER_NAME
+
+phases:
+  pre_build:
+    commands:
+    - echo "Autenticando en Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  build:
+    commands:
+      - echo "Construyendo la imagen Docker basada en Anaconda..."
+      # Aquí se construye la imagen; puedes ajustar el comando si requieres incorporar identificadores de build.
+      - docker build -t $IMAGE_REPO_NAME:latest .
+      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+
+  post_build:
+    commands:
+      - echo "Publicando la imagen en ECR..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:latest
+      
+      - echo "Obteniendo la última definición de tarea..."
+      - aws ecs describe-task-definition --task-definition $TASK_FAMILY --query "taskDefinition.containerDefinitions" > container-def.json
+      
+      - echo "🛠️ Actualizando la imagen en la Task Definition..."
+      - jq '.[] | .image="${AWS_ACCOUNT_ID}.dkr.ecr.'$AWS_REGION'.amazonaws.com/'$IMAGE_REPO_NAME':latest"' container-def.json > new-container-def.json
+      
+      - echo "Registrando nueva ECS Task Definition..."

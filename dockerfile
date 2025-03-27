@@ -1,5 +1,5 @@
 # Imagen base con Miniconda
-FROM continuumio/miniconda3
+FROM public.ecr.aws/y0o4y9o3/anaconda-pkg-build:main
 
 # Definir el directorio de trabajo
 WORKDIR /app

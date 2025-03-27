@@ -1,0 +1,9 @@
+name: mi_entorno
+dependencies:
+  - python=3.9
+  - scikit-learn
+  - numpy
+  - pandas
+  - matplotlib
+  - openpyxl
+  - boto3
